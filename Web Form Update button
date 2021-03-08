@@ -1,0 +1,12 @@
+protected void btnUpdate_Click(object sender, EventArgs e)
+        {
+            con.Open();
+            SqlCommand cmd = con.CreateCommand();
+            cmd.CommandType = CommandType.Text;
+            cmd.CommandText = ("INSERT INTO [Customers_db].[dbo].[idwithphoto] (name,age,salary,country,city) VALUES ('"+txtName.Text+ "','" + txtAge.Text + "','" + txtSalary.Text + "','" + txtCountry.Text + "','" + txtCity.Text + "')");
+            
+            cmd.ExecuteNonQuery();
+            con.Close();
+
+            Response.Redirect("Employe%20With%20Photo.aspx");
+        }
