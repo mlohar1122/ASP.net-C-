@@ -1,0 +1,4 @@
+<asp:SqlDataSource ID="SqlDataSource2" runat="server" ConnectionString="<%$ ConnectionStrings:Customers_dbConnectionString %>" 
+SelectCommand="SELECT * FROM  [Customers_db].[dbo].[GridView]" UpdateCommand="UPDATE [Customers_db].[dbo].[GridView] SET [name] = @name, [age]= @age, 
+[salary]=@salary, [country]=@country, [city]=@city where [id]=@id" DeleteCommand="DELETE FROM [Customers_db].[dbo].[GridView] WHERE [id]=@id"/>
+            
