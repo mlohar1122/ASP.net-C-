@@ -1,0 +1,241 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using umms.App_Code;
+
+namespace umms.page
+{
+    public partial class ChangeAT : System.Web.UI.Page
+    {
+        connection con = new connection();
+        DataTable dt = new DataTable();
+        static string ummsdb = "[umms].[dbo].";
+        static string erpdb = "[PacificERP].[dbo].";
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            if (!Page.IsPostBack)
+            {
+                dt = con.select("SELECT a.btid,a.bid,d.crname+', '+c.bshortname+'('+b.sessionname+')' as batch FROM " + ummsdb + "[dt_batch] as a join " + erpdb + "dt_session as b on(a.sesid=b.sesid) join " + erpdb + "dt_branch as c on(a.bid=c.bid) join " + erpdb + "dt_course as d on (a.crid=d.crid)");
+
+                ddlbatch.DataSource = dt;
+                ddlbatch.DataTextField = "batch";
+                ddlbatch.DataValueField = "btid";
+                ddlbatch.DataBind();
+                ddlbatch.Items.Insert(0, "---Select Batch---");
+                
+            }
+
+
+        }
+        protected string[] getsubjects(string bid, object sender)
+        {
+            DropDownList ddl = sender as DropDownList;
+            string[] id = new string[4];
+            dt = con.select("select * from " + erpdb + "dt_branch where bid='" + bid + "'");
+            id[0] = dt.Rows[0]["uid"].ToString();
+            id[1] = dt.Rows[0]["fid"].ToString();
+            id[2] = dt.Rows[0]["cid"].ToString();
+            id[3] = dt.Rows[0]["crid"].ToString();
+            dt = con.select("select cour_duration,cour_type_id from " + erpdb + "dt_course where crid='" + id[3] + "'");
+            int duration = Convert.ToInt32(dt.Rows[0]["cour_duration"].ToString().ToCharArray().ElementAt(0).ToString());
+            if (ddl != null)
+            {
+                if (ddl.ID == "ddlbatch")
+                {
+                    if (dt.Rows[0]["cour_type_id"].ToString() == "2")
+                    {
+                        ddlsem.Items.Clear();
+                        ddlsem.Enabled = true;
+                        int semcount = duration * 2;
+                        dt = con.select("select * from " + erpdb + "dt_semester where NewSemId='2'");
+                        ddlsem.DataSource = dt;
+                        ddlsem.DataTextField = "semestername";
+                        ddlsem.DataValueField = "semid";
+                        ddlsem.DataBind();
+                        ddlsem.Items.Insert(0, "---select semester---");
+                    }
+                    else if (dt.Rows[0]["cour_type_id"].ToString() == "1")
+                    {
+                        ddlsem.Items.Clear();
+                        ddlsem.Enabled = true;
+                        dt = con.select("select top(" + duration + ") * from " + erpdb + "dt_semester where NewSemId='1'");
+                        ddlsem.DataSource = dt;
+                        ddlsem.DataTextField = "semestername";
+                        ddlsem.DataValueField = "semid";
+                        ddlsem.DataBind();
+                        ddlsem.Items.Insert(0, "---select semester---");
+                    }
+                    else
+                    {
+                        ddlsem.Items.Clear();
+                        ddlsem.Enabled = false;
+
+                    }
+                }
+            }
+            return id;
+        }
+        protected void ddlbatch_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (ddlbatch.SelectedIndex != 0)
+            {
+                dt = con.select("select * from " + ummsdb + "dt_batch where btid='" + ddlbatch.SelectedValue + "'");
+                getsubjects(dt.Rows[0]["bid"].ToString(), sender);
+                ddlrestype.Items.Clear();
+                Changeatt.DataSource = null;
+                Changeatt.DataBind();
+                
+            }
+            else
+            {
+                ddlsem.Items.Clear();
+                ddlrestype.Items.Clear();
+                Changeatt.DataSource = null;
+                Changeatt.DataBind();
+                DropDownList1.Visible = false;
+                btnchangeatt.Visible = false;
+            }
+        }
+        protected void ddlsem_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (ddlsem.SelectedIndex != 0)
+            {
+                dt = con.select("select * from " + ummsdb + "dt_resulttype");
+                ddlrestype.DataSource = dt;
+                ddlrestype.DataTextField = "restype";
+                ddlrestype.DataValueField = "resid";
+                ddlrestype.DataBind();
+                ddlrestype.Items.Insert(0, "-Result Type-");
+               
+            }
+            else
+            {
+               
+                ddlrestype.Items.Clear();
+                Changeatt.DataSource = null;
+                Changeatt.DataBind();
+                DropDownList1.Visible = false;
+                btnchangeatt.Visible = false;
+            }
+        }
+        protected void ddlrestype_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string query = string.Empty;
+            if (ddlrestype.SelectedIndex != 0)
+            {
+
+                query = "Select a.studentid,b.fname,b.Enrol_no,b.sname, c.rollnum FROM " + ummsdb + "[dt_result] a join " + erpdb + "dt_studentreg b on a.studentid = b.id join " + ummsdb + "dt_rollnum as c on  c.stdid=a.studentid where a.semid = '" + ddlsem.SelectedValue + "' and a.btid = '" + ddlbatch.SelectedValue + "' and a.restypeid='" + ddlrestype.SelectedValue + "' and c.semid='" + ddlsem.SelectedValue + "' and c.attemp='" + ddlrestype.SelectedValue + "' group by a.studentid, b.Enrol_no, b.sname,b.fname,c.rollnum  order by b.sname";
+
+
+                dt = con.select(query);
+                ddlstudent.DataSource = dt;
+                ddlstudent.DataTextField = "sname";
+                ddlstudent.DataValueField = "studentid";
+                ddlstudent.DataBind();
+                ddlstudent.Items.Insert(0, "-Select Student-");
+               
+            }
+            else
+            {
+                DropDownList1.Visible = false;
+                btnchangeatt.Visible = false;
+                ddlstudent.DataSource = null;
+                ddlstudent.DataBind();
+
+            }
+        }
+        protected void ddlstudent_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+            if (ddlstudent.SelectedIndex != 0)
+            {
+                string query = ("SELECT ROW_NUMBER() OVER ( PARTITION BY b.sname ORDER BY b.Enrol_no ) as Sn, b.Enrol_no as Enrollment,b.sname as Student_name,e.crname + '(' + f.sessionname + ')' as Batch_name,p.paper_name as Paper,c.semFullName as Semester,d.restype as Attempt, (case when(select rollnum from[umms].[dbo].dt_rollnum as g where g.stdid = a.studentid and g.attemp = d.resid and semid = a.semid) is null then(select rollnum from[umms].[dbo].dt_rollnum as g where g.stdid = a.studentid and  semid = a.semid and attemp = a.Rattmp) else (select rollnum from[umms].[dbo].dt_rollnum as g where g.stdid = a.studentid and g.attemp = d.resid and semid = a.semid) end) as RollNumber FROM[umms].[dbo].[dt_result] as a join[PacificERP].[dbo].[dt_studentreg] as b on a.studentid = b.id join[PacificERP].[dbo].dt_semester as c on c.semid = a.semid join[umms].[dbo].dt_resulttype as d on d.resid = a.restypeid join[PacificERP].[dbo].dt_course as e on e.crid = b.crid join[PacificERP].[dbo].dt_session as f on f.sesid = b.sessionid join [umms].[dbo].[dt_subjectdetails] as p on p.paperid = a.paperid where a.studentid = '" + ddlstudent.SelectedValue + "' and a.btid = '" + ddlbatch.SelectedValue + "' and a.semid = '" + ddlsem.SelectedValue + "' and d.resid='" + ddlrestype.SelectedValue + "' group by b.sname, c.semFullName, d.restype, b.fname, Enrol_no ,p.paper_name,e.crname, f.sessionname, a.btid, a.semid, d.resid,a.studentid,a.Rattmp order by c.semFullName");
+
+                dt = con.select(query);
+                if (dt.Rows.Count != 0)
+                {
+                    DropDownList1.Visible = true;
+                    btnchangeatt.Visible = true;
+                    Changeatt.DataSource = dt;
+                    Changeatt.DataBind();
+                }
+                else
+                {
+                    DropDownList1.Visible = false;
+                    btnchangeatt.Visible = false;
+                    Changeatt.DataSource = null;
+                    Changeatt.DataBind();
+                }
+
+            }
+            else
+            {
+                Changeatt.DataSource = null;
+                Changeatt.DataBind();
+            }
+
+        }
+        protected void btnchangeatt_Click(object sender, EventArgs e)
+        {
+            if (DropDownList1.SelectedIndex != 0)
+            {
+                dt = con.select(" select * from [umms].[dbo].[dt_result]  WHERE btid = '" + ddlbatch.SelectedValue + "' and semid = '" + ddlsem.SelectedValue + "' and restypeid = '" + DropDownList1.SelectedValue + "' and studentid = '" + ddlstudent.SelectedValue + "'");
+               
+                if (dt.Rows.Count != 0)
+                {
+                    //string a = dt.Rows[0]["restypeid"].ToString();
+                    //string b = DropDownList1.SelectedValue;
+                    //string temp = string.Empty;
+
+                    // Attempt Swapping 
+
+                    string query = "UPDATE [umms].[dbo].[dt_result] SET restypeid = '0' WHERE btid = '" + ddlbatch.SelectedValue + "' and semid = '" + ddlsem.SelectedValue + "' and restypeid = '" + DropDownList1.SelectedValue + "' and studentid = '" + ddlstudent.SelectedValue + "'";
+                    query = query + "UPDATE [umms].[dbo].[dt_result] SET restypeid = '" + DropDownList1.SelectedValue + "' WHERE btid = '" + ddlbatch.SelectedValue + "' and semid = '" + ddlsem.SelectedValue + "' and restypeid = '"+ddlrestype.SelectedValue+"' and studentid = '" + ddlstudent.SelectedValue + "'";
+                    query = query + "UPDATE [umms].[dbo].[dt_result] SET restypeid = '" + ddlrestype.SelectedValue + "' WHERE btid = '" + ddlbatch.SelectedValue + "' and semid = '" + ddlsem.SelectedValue + "' and restypeid = '0' and studentid = '" + ddlstudent.SelectedValue + "'";
+
+                    int res = con.update(query);
+                    if (res != 0)
+                        ScriptManager.RegisterStartupScript(this, this.GetType(), "script", "alert('Data Already Avalible in Changes Attempt');", true);
+                }
+                else
+                {
+                        string update = ("UPDATE [umms].[dbo].[dt_result] SET restypeid = '" + DropDownList1.Text + "' WHERE btid = '" + ddlbatch.SelectedValue + "' and semid = '" + ddlsem.SelectedValue + "' and restypeid = '" + ddlrestype.SelectedValue + "' and studentid = '" + ddlstudent.SelectedValue + "'");
+
+
+                    dt = con.select(" select * from [umms].[dbo].[dt_rollnum]  WHERE semid = '" + ddlsem.SelectedValue + "' and attemp = '" + DropDownList1.SelectedValue + "' and stdid = '" + ddlstudent.SelectedValue + "'");
+
+                    if (dt.Rows.Count != 0) {
+
+                        string query = "UPDATE [umms].[dbo].[dt_rollnum] SET attemp = '0' WHERE btid = '" + ddlbatch.SelectedValue + "' and semid = '" + ddlsem.SelectedValue + "' and attemp = '" + DropDownList1.SelectedValue + "' and stdid = '" + ddlstudent.SelectedValue + "'";
+
+                        query = query + "UPDATE [umms].[dbo].[dt_rollnum] SET attemp = '" + DropDownList1.SelectedValue + "' WHERE btid = '" + ddlbatch.SelectedValue + "' and semid = '" + ddlsem.SelectedValue + "' and attemp = '" + ddlrestype.SelectedValue + "' and stdid = '" + ddlstudent.SelectedValue + "'";
+
+                        query = query + "UPDATE[umms].[dbo].[dt_rollnum] SET attemp = '" + ddlrestype.SelectedValue + "' WHERE btid = '" + ddlbatch.SelectedValue + "' and semid = '" + ddlsem.SelectedValue + "' and attemp = '0' and stdid = '" + ddlstudent.SelectedValue + "'";
+
+                        int res1 = con.update(query);    
+
+                    }
+                    else { 
+                           string updateroll = ("UPDATE [umms].[dbo].[dt_rollnum] SET attemp = '" + DropDownList1.Text + "' WHERE semid = '" + ddlsem.SelectedValue + "' and stdid = '" + ddlstudent.SelectedValue + "' and attemp = '" + ddlrestype.SelectedValue + "' ");
+
+                        int res = con.update(update);
+                        int res1 = con.update(updateroll);
+                        if (res != 0 && res1 != 0)
+                            ScriptManager.RegisterStartupScript(this, this.GetType(), "script", "alert('Succesfully Change Attempt & Roll No ');", true);
+
+                    } 
+     
+                }
+
+            }
+             else
+                {
+                    ScriptManager.RegisterStartupScript(this, this.GetType(), "script", "alert('Please Select Attempt ');", true);
+                }
+        }
+    }
+}
